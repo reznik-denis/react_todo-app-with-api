@@ -4,7 +4,8 @@ import classNames from 'classnames';
 import { Todo } from '../../types/Todo';
 import { Actions } from '../../types/Actions';
 import { filteredTodos } from '../../utils/filteredTodos';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import * as postServise from '../../api/todos';
 
 type Props = {
   todos: Todo[];
@@ -12,12 +13,9 @@ type Props = {
   loading: { [key: number]: boolean };
   onDelete: (id: number) => void;
   tempTodo: Todo | null;
-  onUpdate: (newTodo: Todo) => void;
-  isEditTodo: { [id: number]: boolean } | null;
-  // eslint-disable-next-line
-  setIsEditTodo: React.Dispatch<React.SetStateAction<{ [id: number]: boolean } | null>>;
-  editTitle: string;
-  setEditTitle: (title: string) => void;
+  handleLoading: (id: number, type: string) => void;
+  updateTodosFormServer: (todo: Todo) => void;
+  errorNotification: (message: string) => void;
 };
 export const ListOfTodos: React.FC<Props> = ({
   todos,
@@ -25,14 +23,35 @@ export const ListOfTodos: React.FC<Props> = ({
   loading,
   onDelete,
   tempTodo,
-  onUpdate,
-  isEditTodo,
-  setIsEditTodo,
-  editTitle,
-  setEditTitle,
+  handleLoading,
+  updateTodosFormServer,
+  errorNotification,
 }) => {
+  const [isEditTodo, setIsEditTodo] = useState<{
+    [id: number]: boolean;
+  } | null>(null);
+  const [editTitle, setEditTitle] = useState('');
   const inputRefFocus = useRef<HTMLInputElement>(null);
   const returnEditionRef = useRef<(e: KeyboardEvent) => void>(() => {});
+
+  const updatedTodo = (newTodo: Todo) => {
+    handleLoading(newTodo.id, 'turnOn');
+    postServise
+      .updateTodos(newTodo)
+      .then(updateTodo => {
+        const todo = updateTodo as Todo;
+
+        updateTodosFormServer(todo);
+        setEditTitle('');
+        setIsEditTodo(null);
+      })
+      .catch(() => {
+        errorNotification('Unable to update a todo');
+      })
+      .finally(() => {
+        handleLoading(newTodo.id, 'turnOff');
+      });
+  };
 
   const handleCompleted = (id: number) => {
     const index = todos.findIndex(todo => id === todo.id);
@@ -41,7 +60,7 @@ export const ListOfTodos: React.FC<Props> = ({
       completed: todos[index].completed ? false : true,
     };
 
-    onUpdate(newTodo);
+    updatedTodo(newTodo);
   };
 
   useEffect(() => {
@@ -67,14 +86,14 @@ export const ListOfTodos: React.FC<Props> = ({
 
   const handleEditTodo = (id: number, title: string) => {
     setIsEditTodo(null);
+    setIsEditTodo({ [id]: true });
+    setEditTitle(title);
+
     const timeout = setTimeout(() => {
       if (inputRefFocus.current) {
         inputRefFocus.current.focus();
       }
     }, 0);
-
-    setIsEditTodo({ [id]: true });
-    setEditTitle(title);
 
     return () => clearTimeout(timeout);
   };
@@ -95,6 +114,8 @@ export const ListOfTodos: React.FC<Props> = ({
 
     if (editTitle.length === 0) {
       onDelete(id);
+
+      return;
     }
 
     const newTodo = {
@@ -102,7 +123,7 @@ export const ListOfTodos: React.FC<Props> = ({
       title: editTitle.trim(),
     };
 
-    onUpdate(newTodo);
+    updatedTodo(newTodo);
   };
 
   const handleBlur = (id: number) => {

@@ -1,8 +1,8 @@
-import classNames from 'classnames';
 import React, { useImperativeHandle, useRef, useState } from 'react';
 import { focusInput } from '../../utils/focusInput';
 import * as postServise from '../../api/todos';
 import { Todo } from '../../types/Todo';
+import { ToggleButton } from '../ToggleButton';
 
 type Props = {
   todos: Todo[];
@@ -11,7 +11,7 @@ type Props = {
   setTempTodo: (todo: Todo | null) => void;
   setTodos: (todo: Todo) => void;
   setLoading: (id: number, type: string) => void;
-  toggleAll: () => void;
+  updateTodos: (todo: Todo) => void;
 };
 
 interface InputHandle {
@@ -27,7 +27,7 @@ const HeaderTodos = React.forwardRef<InputHandle, Props>(
       setTempTodo,
       setTodos,
       setLoading,
-      toggleAll,
+      updateTodos,
     },
     ref,
   ) => {
@@ -96,13 +96,12 @@ const HeaderTodos = React.forwardRef<InputHandle, Props>(
     return (
       <header className="todoapp__header">
         {todos.length > 0 && (
-          <button
-            type="button"
-            className={classNames('todoapp__toggle-all', {
-              active: checkCompleted,
-            })}
-            data-cy="ToggleAllButton"
-            onClick={toggleAll}
+          <ToggleButton
+            todos={todos}
+            checkCompleted={checkCompleted}
+            setLoading={setLoading}
+            updateTodos={updateTodos}
+            errorNotification={errorNotification}
           />
         )}
 

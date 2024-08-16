@@ -17,10 +17,6 @@ export const App: React.FC = () => {
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
   const timeoutId = useRef<number | null>(null);
   const inputRef = useRef<{ focus: () => void }>(null);
-  const [isEditTodo, setIsEditTodo] = useState<{
-    [id: number]: boolean;
-  } | null>(null);
-  const [editTitle, setEditTitle] = useState('');
 
   useEffect(() => {
     focusInput(inputRef);
@@ -55,36 +51,6 @@ export const App: React.FC = () => {
     }, 3000);
   };
 
-  const deleteTodo = (todoId: number) => {
-    setLoading(prevLoading => ({ ...prevLoading, [todoId]: true }));
-    postServise
-      .deleteTodos(todoId)
-      .then(() =>
-        setTodos(currentTodos =>
-          currentTodos.filter(({ id }) => id !== todoId),
-        ),
-      )
-      .catch(() => {
-        errorNotification('Unable to delete a todo');
-      })
-      .finally(() => {
-        setLoading(prevLoading => {
-          const { [todoId]: ignored, ...rest } = prevLoading;
-
-          return rest;
-        });
-        focusInput(inputRef);
-      });
-  };
-
-  const updateTodosFormServer = (todoFromServer: Todo) => {
-    setTodos(currentTodos => {
-      return currentTodos.map(currentTodo =>
-        currentTodo.id === todoFromServer.id ? todoFromServer : currentTodo,
-      );
-    });
-  };
-
   const handleLoading = (id: number, type: string) => {
     switch (type) {
       case 'turnOn':
@@ -100,23 +66,30 @@ export const App: React.FC = () => {
     }
   };
 
-  const updatedTodo = (newTodo: Todo) => {
-    handleLoading(newTodo.id, 'turnOn');
+  const deleteTodo = (todoId: number) => {
+    handleLoading(todoId, 'turnOn');
     postServise
-      .updateTodos(newTodo)
-      .then(updateTodo => {
-        const todo = updateTodo as Todo;
-
-        updateTodosFormServer(todo);
-        setEditTitle('');
-        setIsEditTodo(null);
+      .deleteTodos(todoId)
+      .then(() => {
+        setTodos(currentTodos =>
+          currentTodos.filter(({ id }) => id !== todoId),
+        );
+        focusInput(inputRef);
       })
       .catch(() => {
-        errorNotification('Unable to update a todo');
+        errorNotification('Unable to delete a todo');
       })
       .finally(() => {
-        handleLoading(newTodo.id, 'turnOff');
+        handleLoading(todoId, 'turnOff');
       });
+  };
+
+  const updateTodosFormServer = (todoFromServer: Todo) => {
+    setTodos(currentTodos => {
+      return currentTodos.map(currentTodo =>
+        currentTodo.id === todoFromServer.id ? todoFromServer : currentTodo,
+      );
+    });
   };
 
   const clearCompleted = async () => {
@@ -141,38 +114,6 @@ export const App: React.FC = () => {
 
   const checkCompleted = todos?.every(todo => todo.completed === true);
 
-  const promiseToggleComleted = (toggledTodo: Todo) => {
-    return new Promise<void>(resolve => {
-      updatedTodo(toggledTodo);
-      resolve();
-    });
-  };
-
-  const toggleAllCompleted = async () => {
-    let togglePromises;
-
-    if (checkCompleted) {
-      togglePromises = todos.map(todo => {
-        const toggleTodo = { ...todo, completed: false };
-
-        return promiseToggleComleted(toggleTodo);
-      });
-    } else {
-      const completedTodos = todos.filter(todo => !todo.completed);
-
-      togglePromises = completedTodos.map(todo => {
-        const toggleTodo = {
-          ...todo,
-          completed: todo.completed ? false : true,
-        };
-
-        return promiseToggleComleted(toggleTodo);
-      });
-    }
-
-    await Promise.allSettled(togglePromises);
-  };
-
   return (
     <div className="todoapp">
       <h1 className="todoapp__title">todos</h1>
@@ -186,7 +127,7 @@ export const App: React.FC = () => {
           setTempTodo={setTempTodo}
           setTodos={setTodosFormServer}
           setLoading={handleLoading}
-          toggleAll={toggleAllCompleted}
+          updateTodos={updateTodosFormServer}
         />
 
         <ListOfTodos
@@ -195,11 +136,9 @@ export const App: React.FC = () => {
           onDelete={deleteTodo}
           loading={loading}
           tempTodo={tempTodo}
-          onUpdate={updatedTodo}
-          isEditTodo={isEditTodo}
-          setIsEditTodo={setIsEditTodo}
-          editTitle={editTitle}
-          setEditTitle={setEditTitle}
+          handleLoading={handleLoading}
+          updateTodosFormServer={updateTodosFormServer}
+          errorNotification={errorNotification}
         />
 
         <FooterTodos
