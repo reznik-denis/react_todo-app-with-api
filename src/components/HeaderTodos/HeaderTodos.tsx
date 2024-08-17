@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, useRef, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { focusInput } from '../../utils/focusInput';
 import * as postServise from '../../api/todos';
 import { Todo } from '../../types/Todo';
@@ -43,6 +43,10 @@ const HeaderTodos = React.forwardRef<InputHandle, Props>(
         }
       },
     }));
+
+    useEffect(() => {
+      focusInput(inputRef);
+    }, []);
 
     const handleTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
       setNewInputTitle(e.currentTarget.value);

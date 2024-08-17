@@ -19,8 +19,6 @@ export const App: React.FC = () => {
   const inputRef = useRef<{ focus: () => void }>(null);
 
   useEffect(() => {
-    focusInput(inputRef);
-
     postServise
       .getTodos()
       .then(setTodos)
